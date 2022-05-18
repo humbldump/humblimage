@@ -3,7 +3,5 @@ __author__ = 'HumblDump'
 __copyright__ = 'Copyright 2022, HumblDump'
 __license__ = 'MIT'
 
-from . import main
-from . import logger
 
 __all__ = ['__version__', '__author__', '__copyright__', '__license__']
