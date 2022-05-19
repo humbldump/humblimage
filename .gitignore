@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+composer.phar
+**/vendor/
+**/.vscode
+.vscode
 # Distribution / packaging
 .Python
 build/
