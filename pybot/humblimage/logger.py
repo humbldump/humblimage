@@ -1,4 +1,5 @@
 import logging, sys
+from logging import CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING
 
 class CustomFormatter(logging.Formatter):
     
