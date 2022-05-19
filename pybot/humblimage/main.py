@@ -7,7 +7,8 @@ from humblimage.logger import *
 
 import tweepy, json
 
-
+from urllib import request as urreq, parse as urparse
+import tempfile
 load_dotenv()
 
 
@@ -36,8 +37,29 @@ class humblimage:
         # * Connect to twitter
         self.__tAPI = self.connectTwitter()
 
-        test = self.getRandomSplash()
-        print(test)
+
+        url = "https://images.unsplash.com/photo-1650366055161-6707e84a2301?crop=entropy&cs=tinysrgb&fm=jpg&ixid=MnwxMTMwMDl8MHwxfHJhbmRvbXx8fHx8fHx8fDE2NTI5NjIyNzQ&ixlib=rb-1.2.1&q=80"
+        print(urparse.parse_qs(urparse.urlparse(url).query))
+
+        # lala = urreq.urlopen(url)
+
+        # # * Download image from url and save
+        # r = request("GET", url)
+        # with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg", delete=False) as f:
+        #     f.write(lala.read())
+        #     f.flush()
+        #     print(f.name)
+        # # * upload media to twitter
+        # media = self.__tAPI.media_upload(filename="test.jpg",additional_owners="3043189101")
+        
+        # # * post media to twitter
+        # self.__tAPI.update_status(
+        #     status="New bot test 2",
+        #     media_ids=[media.media_id_string],
+        # )
+
+        
+        
 
 
     """------------- Unsplash ----------------"""
