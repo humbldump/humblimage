@@ -41,7 +41,7 @@ class humblimage:
         url = "https://images.unsplash.com/photo-1650366055161-6707e84a2301?crop=entropy&cs=tinysrgb&fm=jpg&ixid=MnwxMTMwMDl8MHwxfHJhbmRvbXx8fHx8fHx8fDE2NTI5NjIyNzQ&ixlib=rb-1.2.1&q=80"
         print(urparse.parse_qs(urparse.urlparse(url).query))
 
-        lala = urreq.urlopen(url)
+        # lala = urreq.urlopen(url)
 
         # # * Download image from url and save
         # r = request("GET", url)
