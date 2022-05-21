@@ -51,6 +51,11 @@ class humblimage:
         # * Connect to twitter
         self.__tAPI = self.connectTwitter()
 
+        r = self.__reqSession.get("https://randimage.humbldump.com/", headers={"Auth": f"Client-ID 12341234"})
+        print(r.json())
+        exit(1)
+
+
         # ? Checking if there is spesific categories to get image from
         if "IMG_CATEGORIES" in self.__env:
             self.__logger.log(INFO, f"Found categories: {self.__env['IMG_CATEGORIES']}")
