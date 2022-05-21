@@ -16,7 +16,7 @@ require './humblimage/images.php';
 $route = new \Klein\Klein();
 
 
-$route->with('/', function () use ($route) {
+$route->with('/v1/', function () use ($route) {
 
 
 

@@ -51,10 +51,6 @@ class humblimage:
         # * Connect to twitter
         self.__tAPI = self.connectTwitter()
 
-        r = self.__reqSession.get("https://randimage.humbldump.com/", headers={"Auth": f"Client-ID 12341234"})
-        print(r.json())
-        exit(1)
-
 
         # ? Checking if there is spesific categories to get image from
         if "IMG_CATEGORIES" in self.__env:
@@ -175,8 +171,14 @@ class humblimage:
             self.__logger.log(ERROR, f"Failed to get random image from unsplash api. Status code: {r.status_code}")
             raise Exception(f"Failed to get random image from unsplash api. Status code: {r.status_code}")
 
+        # * Check if the returned image is already posted
+        json = r.json()
+        if self.isImagePosted(type="imageid", value=json["id"]):
+            self.__logger.log(WARNING, f"Image already posted. Skipping to next image")
+            return self.getRandomSplash()
+
         # * Return the json response
-        return r.json()
+        return json
 
     """------------- Twitter ----------------"""
     def connectTwitter(self) -> tweepy.API:
@@ -204,3 +206,48 @@ class humblimage:
 
         # * return the api object
         return tAPI
+
+    """------------- API ----------------"""
+    def isImagePosted(self, type: str = "imageid", value: str|int = None) -> bool:
+        """
+        This method responsible for check if the image was posted to twitter
+        :return: True if the image was posted, False otherwise
+        """
+
+        # * Check if all credentials are set in env
+        for e in ["API_ENDPOINT", "API_VERSION"]:
+            if e not in self.__env:
+                self.__logger.log(ERROR, f"Missing env variable {e}")
+                raise Exception(f"Missing env variable {e}")
+
+        # * Get the last image posted to twitter
+        r = self.__reqSession.get(f"http://{self.__env['API_ENDPOINT']}/{self.__env['API_VERSION']}/search", params={"type": type, "value": value})
+        json = r.json()
+
+        # * Check if the request was successfull
+        if r.status_code != 200:
+            #if status code not 200 return false
+            return False
+        else:
+            if "image" in json:
+            #if request returend image return true
+                return True
+            elif "isOk" in json and json["isOk"] == True:
+            #if request returend isOk return true
+                return True
+            
+            return False
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
