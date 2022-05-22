@@ -3,5 +3,5 @@ from humblimage.main import humblimage
 
 if __name__ == '__main__':
   test = humblimage()
-  lala = test.getRandomSplash()
+  lala = test.postImage()
   print(lala)

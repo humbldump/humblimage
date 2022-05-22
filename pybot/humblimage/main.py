@@ -1,3 +1,4 @@
+from distutils.util import strtobool
 import json
 import os
 import random
@@ -13,6 +14,8 @@ from urllib3.util import Retry
 
 from humblimage.logger import *
 
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait, ALL_COMPLETED
+import time
 load_dotenv()
 
 
@@ -78,44 +81,66 @@ class humblimage:
         #     media_ids=[media.media_id_string],
         # )
 
-    def startPosting(self) -> int:
+    def postImage(self) -> int:
 
-        # * Get the random image from unsplash
+        # * Check if env file has multiple post image feature open
+
+        count = 2 if "POST_MULTIPLE_IMAGES" in self.__env and strtobool(self.__env['POST_MULTIPLE_IMAGES']) == True else 1
+        """
+            If in env file there is POST_MULTIPLE_IMAGES set to true,
+            Post max 2 file to twitter
+            For not posting 2 file everytime, we chose random 1 or 2 with weight on 1 is 80%
+        """
+
         
+       # Creating a thread pool executer with max workers of count and thread name prefix of
+       # humblimage
+        executer = ThreadPoolExecutor(max_workers=count, thread_name_prefix="humblimage")
         
-        with tempfile.NamedTemporaryFile(mode="wb+",prefix="humblimage_", suffix=".jpg", delete=False) as f:
-            imageResponse = self.prepareImg()
-            f.write(imageResponse['response'].read())
-            f.flush()
-            # os.startfile(f.name) open file
+        # List of thread pool executer
+        execList = []
 
-            # * upload media to twitter
-            media = self.__tAPI.media_upload(filename=f.name, additional_owners="3043189101")
+        # List of executer returns
+        file_results = {
+            "medias": [],
+            "splashs": []
+        }
 
-            # * post media to twitter
-            testt = self.__tAPI.update_status(
-                status=f"'{imageResponse['splash']['description'] if not imageResponse['splash']['description'] == None else imageResponse['splash']['alt_description'] if not imageResponse['splash']['alt_description'] == None else '' }'",
-                media_ids=[media.media_id_string],
-            )
+        # * Loop for count times
+        for i in range(count):
+            # * Create a thread pool executer
+            execList.append(executer.submit(self.uploadTwitter))
 
-            print(testt)
+        # * Wait for all thread pool executer to finish
+        for r in as_completed(execList):
+            file_results['medias'].append(r.result()['media'])
+            file_results['splashs'].append(r.result()['image'])
+        
+        test = self.__tAPI.update_status(
+            status="New bot test",
+            media_ids=[val.media_id for val in file_results['medias']]
+        )
 
-            self.__logger.log(INFO, f"Saved image to {f.name}")
+        print(test)
 
-        return 1 
+        return 0
     
     def prepareImg(self) -> dict:
         """
         This method responsible for prepare the image from unsplash api
-        :return: A urlopen object
+        :return: A Spash, URL, Urlopen dicts list
         """
 
         i = 0
+        #Retry 10 times
         while i < 10:
             i += 1
             splash = self.getRandomSplash()
             url = splash["urls"]["regular"]
             r = urreq.urlopen(url)
+
+            # We must check if the file is more then 5MB
+            # https://developer.twitter.com/en/docs/twitter-api/v1/media/upload-media/overview
             if int(r.headers['content-length']) < 5000000:
                 return {
                     "splash": splash,
@@ -207,6 +232,39 @@ class humblimage:
         # * return the api object
         return tAPI
 
+    def uploadTwitter(self, count: int = 1) -> list:
+
+        #? Create a tempfile for image response
+        tempFile = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg", prefix="humblimage_", mode="wb")
+        
+        try:
+            #? Image response from unsplash api
+            imageResponse = self.prepareImg()
+
+            #? Write image response buffer to the tempfile
+            tempFile.write(imageResponse["response"].read())
+            tempFile.flush()
+
+            self.__logger.log(INFO, f"image {imageResponse['splash']['id']} saved to {tempFile.name}")
+            # os.startfile(tempFile.name)
+
+            #? Upload saved image to the Twitter api
+            media = self.__tAPI.media_upload(filename=tempFile.name)
+            
+            if hasattr(media, "media_id"):
+                self.__logger.log(INFO, f"Image uploaded to Twitter, Media ID: {media.media_id}")
+        except Exception as e:
+            raise Exception(e)
+        finally:
+            # ? Finally remove the tempfile
+            tempFile.close()
+            os.remove(tempFile.name)
+
+        return {
+            "image": imageResponse["splash"],
+            "media": media
+        }
+
     """------------- API ----------------"""
     def isImagePosted(self, type: str = "imageid", value: str|int = None) -> bool:
         """
@@ -225,18 +283,27 @@ class humblimage:
         json = r.json()
 
         # * Check if the request was successfull
-        if r.status_code != 200:
-            #if status code not 200 return false
-            return False
-        else:
-            if "image" in json:
-            #if request returend image return true
-                return True
-            elif "isOk" in json and json["isOk"] == True:
-            #if request returend isOk return true
-                return True
-            
-            return False
+        return False if r.status_code != 200 else True if ("image" in json) or ("isOk" in json and json["isOk"] == True) else False
+    
+
+
+
+
+    @staticmethod
+    def colorText(r, g, b, text):
+        """
+        It takes in three integers (r, g, b) and a string (text) and returns a string with the text
+        colored in the rgb color
+        :author: https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
+        :param r: Red
+        :param g: The green value of the color
+        :param b: bold
+        :param text: The text you want to be colored
+        :return: The colorTest method is being returned.
+        """
+        return "\033[38;2;{};{};{}m{} \033[38;2;255;255;255m".format(r, g, b, text)
+
+        
 
 
 
@@ -250,4 +317,3 @@ class humblimage:
 
 
 
-            
