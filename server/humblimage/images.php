@@ -85,24 +85,59 @@ class images
 
   }
 
-  public function SearchbyId(int $id): ?images{
+  public function SearchbyId(?string $id): ?images{
     $result = $this->db->where('id', $id)->getOne(enum::tables['images']);
     return $this->assignData($result);
   }
 
-  public function SearchbyImageId(string $image_id): ?images{
+  public function SearchbyImageId(?string $image_id): ?images{
     $result = $this->db->where('image_id', $image_id)->getOne(enum::tables['images']);
     return $this->assignData($result);
   }
 
-  public function SearchbyTweetId(int $tweet_id): ?images{
+  public function SearchbyTweetId(?string $tweet_id): ?images{
+    //todo: Currently returning ony one image, but we might be posted multiple image on one tweet
     $result = $this->db->where('tweet_id', $tweet_id)->getOne(enum::tables['images']);
     return $this->assignData($result);
   }
 
 
+  /**
+   * It saves the image to the database
+   * 
+   * @return bool if thereis no error on db query returns true.
+   */
   public function saveImagetoDB(): bool{
+    //? Inser images data to DB
+    $result = $this->db->insert(enum::tables['images'], $this->getImageArray());
+
+    //? Set id to the new image
+    if (!is_numeric($this->id)) {
+      throw new Exception("While saving this image, something went wrong", 110);
+    }
+
+    $this->id = $result;
     return $this->db->getLastErrno() == 0;
+  }
+
+  /**
+   * It returns an array of the image's properties.
+   * 
+   * @return array An array of the properties of the object.
+   */
+  public function getImageArray(): array{
+    return [
+      'id' => $this->id,
+      'tweet_id' => $this->tweet_id,
+      'image_id' => $this->image_id,
+      'image_description' => $this->image_description,
+      'image_alt_description' => $this->image_alt_description,
+      'owner_id' => $this->owner_id,
+      'owner_username' => $this->owner_username,
+      'owner_name' => $this->owner_name,
+      'owner_twitter_username' => $this->owner_twitter_username,
+      'postedat' => $this->postedat
+    ];
   }
 
 

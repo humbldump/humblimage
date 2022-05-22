@@ -110,20 +110,24 @@ $route->with('/v1/', function () use ($route) {
         array_merge( //? Merge updated postedat and tweet id with current image data
           [
             "tweet_id" => $servedData['tweet_id'],
-            "postedat" => date('m/d/Y H:i:s', $servedData['postedat']),
+            "postedat" => date('Y-m-d h:i:s', $servedData['postedat']),
           ],
-          $servedData['images'][$key]
+          $servedData['images'][$key] //? image data
         )
       );
+
+      $res[$key] = $imageObj[$key]->saveImagetoDB(); //? Save image
     }
 
+    //if there was an error while saving return 400 and an error
+    if (in_array(false, $res)) {
+      $response->code(500);
+      $response->json(array('error' => 'Error while saving image', 'isOk' => false));
+      return;
+    }
     
-
-
-
-    $response->json($imageObj);
-
-    // print_r($request->param('test'));
+    //? Return Response
+    $response->json(array('isOk' => true));
   });
 
 });
