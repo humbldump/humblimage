@@ -27,8 +27,6 @@ $route->with('/v1/', function () use ($route) {
     $route->response()->json($imageTest);
   });
 
-
-
   /**
    * This route is responsive for image search
    * if the request is a GET request and all requested params is settled look for image on database
@@ -78,7 +76,7 @@ $route->with('/v1/', function () use ($route) {
 
   });
 
-  $route->respond('GET', '[i:id]', function ($request, $response, $service, $app) use ($route) {
+  $route->respond('GET', '[i:id]', function (Request $request,Response $response,ServiceProvider $service, $app) use ($route) {
 
     try {
       $imageTest = (new images())->SearchbyId($request->id);
@@ -89,6 +87,45 @@ $route->with('/v1/', function () use ($route) {
       $response->json(array('error' => $e->getMessage(), 'isOk' => false));
     }
   });
+
+  $route->respond('GET', 'savePostedImage', function (Request $request,Response $response,ServiceProvider $service, $app) use ($route) {
+
+    //Check if imageData passed
+    if(!$request->param('imageData')){
+      $response->code(400);
+      $response->json(array('error' => 'No image', 'isOk' => false));
+      return;
+    }
+
+    $servedData = json_decode($request->param('imageData'), true);
+
+    $imageObj = [];
+    $res = [];
+
+    //? Loop through all posted images
+    foreach ($servedData['images'] as $key => $value) {
+      $imageObj[$key] = new images(); //? Create new images object
+
+      $imageObj[$key]->assignData(
+        array_merge( //? Merge updated postedat and tweet id with current image data
+          [
+            "tweet_id" => $servedData['tweet_id'],
+            "postedat" => date('m/d/Y H:i:s', $servedData['postedat']),
+          ],
+          $servedData['images'][$key]
+        )
+      );
+    }
+
+    
+
+
+
+    $response->json($imageObj);
+
+    // print_r($request->param('test'));
+  });
+
 });
 
 

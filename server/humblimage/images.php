@@ -36,12 +36,12 @@ class images
   /**
    * @var string Image description from unsplash
    */
-  public string $image_description = "";
+  public ?string $image_description = "";
 
   /**
    * @var string Image alternative decsription from unsplash
    */
-  public string $image_alt_description = "";
+  public ?string $image_alt_description = "";
 
   /**
    * @var string Owner of the image id from unsplash
@@ -51,17 +51,17 @@ class images
   /**
    * @var string Owner username of unsplash
    */
-  public string $owner_username = "";
+  public ?string $owner_username = "";
 
   /**
    * @var string Owner fullname from unsplash
    */
-  public string $owner_name = "";
+  public ?string $owner_name = "";
 
   /**
    * @var string Owner twitter profile username
    */
-  public string $owner_twitter_username = "";
+  public ?string $owner_twitter_username = "";
 
   /**
    * @var DateTime of the Twitter post
@@ -101,7 +101,9 @@ class images
   }
 
 
-
+  public function saveImagetoDB(): bool{
+    return $this->db->getLastErrno() == 0;
+  }
 
 
 
@@ -112,7 +114,7 @@ class images
    * 
    * @return ?images The object itself.
    */
-  private function assignData(array $data = null): ?images{
+  public function assignData(array $data = null): ?images{
 
     if ($data == null) {
       throw new Exception("Couldn't find the selected image...", 1);

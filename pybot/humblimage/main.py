@@ -8,6 +8,7 @@ from urllib import parse as urparse
 from urllib import request as urreq
 
 import requests
+
 import tweepy
 from dotenv import load_dotenv
 from urllib3.util import Retry
@@ -36,10 +37,12 @@ class humblimage:
 
 
     # ? A variable that is used to store the session object.
-    __reqSession: requests.session = None
+    __reqSession: requests.Session = None
 
     # ? A variable holds categories list
     categories: list = []
+
+    userAgent = "humbldump/1.0"
 
     def __init__(self) -> None:
 
@@ -53,6 +56,8 @@ class humblimage:
 
         # * Connect to twitter
         self.__tAPI = self.connectTwitter()
+
+        self.userAgent = f"{self.__env['APP_NAME']}/{self.__env['APP_VERSION']}"
 
 
         # ? Checking if there is spesific categories to get image from
@@ -116,11 +121,13 @@ class humblimage:
             file_results['medias'].append(r.result()['media'])
             file_results['splashs'].append(r.result()['image'])
         
-        test = self.__tAPI.update_status(
+        tweet = self.__tAPI.update_status(
             status="New bot test",
             media_ids=[val.media_id for val in file_results['medias']]
         )
-
+        
+        self.savePostedImage(tweet=tweet, images=file_results['splashs'])
+        exit(1)
         print(test)
 
         return 0
@@ -149,8 +156,10 @@ class humblimage:
                 }
 
         raise Exception("Could not get image lover than 5mb from unsplash")
-        
-    def getRequestSession(self) -> requests.session:
+    
+
+
+    def getRequestSession(self) -> requests.Session:
         """
         It creates a session object that will retry 5 times on 521, 500, 502, 503, and 504 errors
         :return: A session object
@@ -165,8 +174,7 @@ class humblimage:
 
         adapter = requests.adapters.HTTPAdapter(max_retries=retry)
 
-        ss = requests.session()
-
+        ss = requests.Session()
 
         ss.mount("http://", adapter)
         ss.mount("https://", adapter)
@@ -233,6 +241,15 @@ class humblimage:
         return tAPI
 
     def uploadTwitter(self, count: int = 1) -> list:
+        """
+        > It takes an image from the Unsplash API, saves it to a temporary file, uploads it to the
+        Twitter API, and returns the image and media objects
+        
+        :param count: The number of images to return. Default: 1. Maximum: 30, defaults to 1
+        :type count: int (optional)
+        :return: A dictionary with the image and media objects
+        :link:  https://developer.twitter.com/en/docs/twitter-api/v1/media/upload-media/api-reference/post-media-upload
+        """
 
         #? Create a tempfile for image response
         tempFile = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg", prefix="humblimage_", mode="wb")
@@ -279,11 +296,52 @@ class humblimage:
                 raise Exception(f"Missing env variable {e}")
 
         # * Get the last image posted to twitter
-        r = self.__reqSession.get(f"http://{self.__env['API_ENDPOINT']}/{self.__env['API_VERSION']}/search", params={"type": type, "value": value})
+        r = self.__reqSession.get(f"{self.__env['API_PROTOCOL']}://{self.__env['API_ENDPOINT']}:{self.__env['API_PORT']}/{self.__env['API_VERSION']}/search", params={"type": type, "value": value})
         json = r.json()
 
         # * Check if the request was successfull
         return False if r.status_code != 200 else True if ("image" in json) or ("isOk" in json and json["isOk"] == True) else False
+
+    def savePostedImage(self, tweet: object = None, images : list = []) -> bool:
+        # * Check if all credentials are set in env
+        for e in ["API_ENDPOINT", "API_VERSION"]:
+            if e not in self.__env:
+                self.__logger.log(ERROR, f"Missing env variable {e}")
+                raise Exception(f"Missing env variable {e}")
+
+        # * Check if the tweet is valid
+        if tweet == None:
+            self.__logger.log(ERROR, f"Missing tweet object")
+            raise Exception(f"Missing tweet object")
+        
+        # * Check if the images is valid
+        if images == []:
+            self.__logger.log(ERROR, f"Missing images list")
+            raise Exception(f"Missing images list")
+        
+        # * Save the images to the database
+        dataBody = {
+            "tweet_id": tweet.id,
+            "postedat": int(tweet.created_at.timestamp()),
+            "images": [
+                {
+                    "image_id": img["id"],
+                    "image_description": img["description"],
+                    "image_alt_description": img['alt_description'],
+                    "owner_id": img["user"]["id"],
+                    "owner_username": img["user"]["username"],
+                    "owner_name": img["user"]["name"],
+                    "owner_twitter_username": img["user"]["twitter_username"],
+                } for img in images
+            ]
+        }
+        
+
+        # * Save the posted image to the database
+        test = self.__reqSession.get(f"{self.__env['API_PROTOCOL']}://{self.__env['API_ENDPOINT']}:{self.__env['API_PORT']}/{self.__env['API_VERSION']}/savePostedImage", params={"imageData":json.dumps(dataBody)}, headers={'user-agent': self.userAgent})
+        print(test.json())
+        
+        return False
     
 
 
