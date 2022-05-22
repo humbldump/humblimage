@@ -54,6 +54,7 @@ class humblimage:
         # * Set the request session with retry conditions
         self.__reqSession = self.getRequestSession()
 
+
         # * Connect to twitter
         self.__tAPI = self.connectTwitter()
 
@@ -64,27 +65,6 @@ class humblimage:
         if "IMG_CATEGORIES" in self.__env:
             self.__logger.log(INFO, f"Found categories: {self.__env['IMG_CATEGORIES']}")
             self.categories = re.split(r"\s*,\s*", self.__env["IMG_CATEGORIES"])
-
-
-        # url = "https://images.unsplash.com/photo-1650366055161-6707e84a2301?crop=entropy&cs=tinysrgb&fm=jpg&ixid=MnwxMTMwMDl8MHwxfHJhbmRvbXx8fHx8fHx8fDE2NTI5NjIyNzQ&ixlib=rb-1.2.1&q=80"
-        # print(urparse.parse_qs(urparse.urlparse(url).query))
-
-        # lala = urreq.urlopen(url)
-
-        # # * Download image from url and save
-        # r = request("GET", url)
-        # with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg", delete=False) as f:
-        #     f.write(lala.read())
-        #     f.flush()
-        #     print(f.name)
-        # # * upload media to twitter
-        # media = self.__tAPI.media_upload(filename="test.jpg",additional_owners="3043189101")
-        
-        # # * post media to twitter
-        # self.__tAPI.update_status(
-        #     status="New bot test 2",
-        #     media_ids=[media.media_id_string],
-        # )
 
     def postImage(self) -> int:
 
@@ -179,6 +159,14 @@ class humblimage:
         ss.mount("http://", adapter)
         ss.mount("https://", adapter)
 
+        #? If there is Certificate connect to API set certificates
+        if "API_USE_CERTIFICATE" in self.__env and strtobool(self.__env['API_USE_CERTIFICATE']) == True:
+            if os.path.exists(f"{os.path.dirname(os.path.abspath(__file__))}/certificates/certificate.cert") and os.path.exists(f"{os.path.dirname(os.path.abspath(__file__))}/certificates/private.key"):
+                ss.cert = (f"{os.path.dirname(os.path.abspath(__file__))}/certificates/certificate.cert", f"{os.path.dirname(os.path.abspath(__file__))}/certificates/private.key")
+                self.__logger.log(INFO, "For API call's certificate is seted.")
+            else:
+                self.__logger.log(WARNING, "API_USE_CERTIFICATE is set to true, but certificate file is not found.")
+    
         return ss
 
     """------------- Unsplash ----------------"""
@@ -296,7 +284,7 @@ class humblimage:
                 raise Exception(f"Missing env variable {e}")
 
         # * Get the last image posted to twitter
-        r = self.__reqSession.get(f"{self.__env['API_PROTOCOL']}://{self.__env['API_ENDPOINT']}:{self.__env['API_PORT']}/{self.__env['API_VERSION']}/search", params={"type": type, "value": value})
+        r = self.__reqSession.get(f"{self.__env['API_PROTOCOL']}://{self.__env['API_ENDPOINT']}:{self.__env['API_PORT']}/{self.__env['API_VERSION']}/search", params={"type": type, "value": value}, headers={'user-agent': self.userAgent})
         json = r.json()
 
         # * Check if the request was successfull
