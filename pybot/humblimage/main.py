@@ -62,7 +62,7 @@ class humblimage:
 
 
         # ? Checking if there is spesific categories to get image from
-        if "IMG_CATEGORIES" in self.__env:
+        if "IMG_CATEGORIES" in self.__env and self.__env["IMG_CATEGORIES"] != "":
             self.__logger.log(INFO, f"Found categories: {self.__env['IMG_CATEGORIES']}")
             self.categories = re.split(r"\s*,\s*", self.__env["IMG_CATEGORIES"])
 
@@ -101,8 +101,10 @@ class humblimage:
             file_results['medias'].append(r.result()['media'])
             file_results['splashs'].append(r.result()['image'])
         
+        st = self.prepareStatus(file_results['splashs'])
+        
         tweet = self.__tAPI.update_status(
-            status="New bot test",
+            status= st,
             media_ids=[val.media_id for val in file_results['medias']]
         )
         
@@ -270,6 +272,29 @@ class humblimage:
             "media": media
         }
 
+    def prepareStatus(self, images : list = []) -> str:
+        """
+        It takes a list of images, and returns a string with the description of the first image in the
+        list, and the name of the user who uploaded it
+        
+        :param images: list = []
+        :type images: list
+        :return: A string with the status and user
+        """
+
+        text = {
+            'status': '',
+            'user': ''
+        }
+
+        if len(images) >= 1:
+            text['status'] = images[0]['description'] if images[0]['description'] != None else images[0]['alt_description'] if images[0]['alt_description'] != None else ""
+            text['user'] = f" -{ '@'+images[0]['user']['twitter_username'] if images[0]['user']['twitter_username'] != None else images[0]['user']['name'] } "
+
+        text["status"] = re.sub(r'http\S+', '', text['status'])
+
+        return f"{text['status']}\n{text['user']}"
+
     """------------- API ----------------"""
     def isImagePosted(self, type: str = "imageid", value: str|int = None) -> bool:
         """
@@ -291,6 +316,16 @@ class humblimage:
         return False if r.status_code != 200 else True if ("image" in json) or ("isOk" in json and json["isOk"] == True) else False
 
     def savePostedImage(self, tweet: object = None, images : list = []) -> bool:
+        """
+        > This function saves the posted image to the database
+        
+        :param tweet: The tweet object that you want to save
+        :type tweet: object
+        :param images: A list of image objects
+        :type images: list
+        :return: The return value is a boolean value.
+        """
+
         # * Check if all credentials are set in env
         for e in ["API_ENDPOINT", "API_VERSION"]:
             if e not in self.__env:
@@ -327,9 +362,13 @@ class humblimage:
 
         # * Save the posted image to the database
         test = self.__reqSession.get(f"{self.__env['API_PROTOCOL']}://{self.__env['API_ENDPOINT']}:{self.__env['API_PORT']}/{self.__env['API_VERSION']}/savePostedImage", params={"imageData":json.dumps(dataBody)}, headers={'user-agent': self.userAgent})
-        print(test.json())
         
-        return False
+        if test.json()['isOk'] == True:
+            self.__logger.log(INFO, f"Image saved to database")
+        else:
+            self.__logger.log(ERROR, f"Image not saved to database")
+
+        return test.json()['isOk'] == True
     
 
 
