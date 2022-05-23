@@ -39,8 +39,8 @@ class CustomFormatter(logging.Formatter):
 
         logging.CRITICAL: f"[{parts['asctime']}] [{parts['name']}] [{red_bold}{parts['levelname']}{reset}] {red}{parts['message']}{reset} ({parts['filename']}:{parts['lineno']})",
 
-        31: f"[{parts['asctime']}] [{blue_bold}TWEET{reset}] {blue}{parts['message']}{reset}",
-        32: f"[{parts['asctime']}] [{purple_bold}DM{reset}] {purple}{parts['message']}{reset}",
+        31: f"[{parts['asctime']}] [{blue_bold}TWEET{reset}] {blue}{parts['message']}{reset}", #TWEET
+        32: f"[{parts['asctime']}] [{purple_bold}CQ{reset}] {purple}{parts['message']}{reset}", #Category
     }
 
     def format(self, record):

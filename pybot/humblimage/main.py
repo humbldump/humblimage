@@ -1,22 +1,24 @@
-from distutils.util import strtobool
 import json
 import os
 import random
 import re
 import tempfile
-from urllib import parse as urparse
+import time
+from concurrent.futures import (ALL_COMPLETED, ThreadPoolExecutor,
+                                as_completed, wait)
+
+from distutils.util import strtobool
 from urllib import request as urreq
 
 import requests
-
 import tweepy
+
+from tweepy.models import Status
 from dotenv import load_dotenv
 from urllib3.util import Retry
 
 from humblimage.logger import *
 
-from concurrent.futures import ThreadPoolExecutor, as_completed, wait, ALL_COMPLETED
-import time
 load_dotenv()
 
 
@@ -62,7 +64,7 @@ class humblimage:
 
 
         # ? Checking if there is spesific categories to get image from
-        if "IMG_CATEGORIES" in self.__env and self.__env["IMG_CATEGORIES"] != "":
+        if "IMG_CATEGORIES" in self.__env and self.__env["IMG_CATEGORIES"] != None:
             self.__logger.log(INFO, f"Found categories: {self.__env['IMG_CATEGORIES']}")
             self.categories = re.split(r"\s*,\s*", self.__env["IMG_CATEGORIES"])
 
@@ -101,14 +103,25 @@ class humblimage:
             file_results['medias'].append(r.result()['media'])
             file_results['splashs'].append(r.result()['image'])
         
+        # * Preapare text for status
         st = self.prepareStatus(file_results['splashs'])
         
-        tweet = self.__tAPI.update_status(
-            status= st,
-            media_ids=[val.media_id for val in file_results['medias']]
-        )
+        # * Post the Tweet
+        try:
+            tweet = self.__tAPI.update_status(
+                status= st,
+                media_ids=[val.media_id for val in file_results['medias']]
+            )
+        except Exception as e:
+            self.__logger.log(ERROR, f"Error posting tweet: {e}")
+            return 1
         
+        self.__logger.log(31, f"Tweet successfully posted: {tweet.id}")
+        time.sleep(.5)
+        self.replyMainWithURL(tweet=tweet, images=file_results['splashs'])
         self.savePostedImage(tweet=tweet, images=file_results['splashs'])
+        
+
         exit(1)
         print(test)
 
@@ -125,12 +138,13 @@ class humblimage:
         while i < 10:
             i += 1
             splash = self.getRandomSplash()
-            url = splash["urls"]["regular"]
+            url = splash["urls"][self.__env['IMG_QUALITY']]
             r = urreq.urlopen(url)
 
             # We must check if the file is more then 5MB
             # https://developer.twitter.com/en/docs/twitter-api/v1/media/upload-media/overview
             if int(r.headers['content-length']) < 5000000:
+                self.__logger.log(INFO, f"Selected image: {splash['id']} weight {int(r.headers['content-length'])}")
                 return {
                     "splash": splash,
                     "url": url,
@@ -185,6 +199,8 @@ class humblimage:
 
         query = None if self.categories == [] else {'query': random.choice(self.categories)}
 
+        if query != None:
+            self.__logger.log(32, f"Searching for image with category: {query['query']}")
 
         # * Get the random image from unsplash
         r = self.__reqSession.get("https://api.unsplash.com/photos/random",params= '' if query == None else query, headers={"Authorization": f"Client-ID {self.__env['UNSPLASH_ACCESS_KEY']}"})
@@ -203,6 +219,22 @@ class humblimage:
         # * Return the json response
         return json
 
+    def replyMainWithURL(self, tweet: Status, images : list ) -> int:
+        
+        #tweet chain begining point
+        replyTweet = tweet.id
+
+        for image in images:
+            self.__logger.log(INFO, f"Sending url to main Tweet with: {image['id']}")
+            sendit = self.__tAPI.update_status(
+                status=f" { '@'+image['user']['twitter_username'] if image['user']['twitter_username'] else '' }\nhttps://unsplash.com/photos/{image['id']}",
+                in_reply_to_status_id=replyTweet
+            )
+
+            if hasattr(sendit, 'id'):
+                replyTweet = sendit.id
+
+        return 1
     """------------- Twitter ----------------"""
     def connectTwitter(self) -> tweepy.API:
         """
@@ -289,11 +321,11 @@ class humblimage:
 
         if len(images) >= 1:
             text['status'] = images[0]['description'] if images[0]['description'] != None else images[0]['alt_description'] if images[0]['alt_description'] != None else ""
-            text['user'] = f" -{ '@'+images[0]['user']['twitter_username'] if images[0]['user']['twitter_username'] != None else images[0]['user']['name'] } "
+            text['user'] = f" -{ images[0]['user']['name'] } "
 
         text["status"] = re.sub(r'http\S+', '', text['status'])
 
-        return f"{text['status']}\n{text['user']}"
+        return f"{text['status'][0:280-len(text['user'])]}\n{text['user']}"
 
     """------------- API ----------------"""
     def isImagePosted(self, type: str = "imageid", value: str|int = None) -> bool:
