@@ -87,7 +87,7 @@ class humblimage:
         # List of thread pool executer
         execList = []
 
-        # List of executer returns
+        # List of executer returnss
         file_results = {
             "medias": [],
             "splashs": []
