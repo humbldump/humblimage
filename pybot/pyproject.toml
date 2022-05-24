@@ -9,6 +9,7 @@ python = "^3.10"
 requests = "^2.27.1"
 python-dotenv = "^0.20.0"
 tweepy = "^4.9.0"
+schedule = "^1.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

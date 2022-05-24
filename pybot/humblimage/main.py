@@ -34,7 +34,7 @@ class humblimage:
     # ? A variable that is used to store the twitter api object.
     __tAPI: tweepy.API = None
 
-    # ? A variable that is hold the logging system
+    # ? A variable that is hold the logging systemm
     __logger = None
 
 
@@ -120,10 +120,6 @@ class humblimage:
         time.sleep(.5)
         self.replyMainWithURL(tweet=tweet, images=file_results['splashs'])
         self.savePostedImage(tweet=tweet, images=file_results['splashs'])
-        
-
-        exit(1)
-        print(test)
 
         return 0
     
