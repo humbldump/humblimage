@@ -1,0 +1,7 @@
+{
+  "require": {
+      "klein/klein": "*",
+      "abraham/twitteroauth": "*",
+      "thingengineer/mysqli-database-class": "dev-master"
+  }
+}
