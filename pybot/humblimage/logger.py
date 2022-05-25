@@ -41,6 +41,7 @@ class CustomFormatter(logging.Formatter):
 
         31: f"[{parts['asctime']}] [{blue_bold}TWEET{reset}] {blue}{parts['message']}{reset}", #TWEET
         32: f"[{parts['asctime']}] [{purple_bold}CQ{reset}] {purple}{parts['message']}{reset}", #Category
+        45: f"[{parts['asctime']}] [{blue_bold}SYS{reset}] {blue}{parts['message']}{reset}", #DEBUG
     }
 
     def format(self, record):

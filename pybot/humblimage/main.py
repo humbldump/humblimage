@@ -35,7 +35,7 @@ class humblimage:
     __tAPI: tweepy.API = None
 
     # ? A variable that is hold the logging systemm
-    __logger = None
+    logger = None
 
 
     # ? A variable that is used to store the session object.
@@ -49,9 +49,9 @@ class humblimage:
     def __init__(self) -> None:
 
         # * Adjust the logger settings
-        self.__logger = customizeLogger().get()
+        self.logger = customizeLogger().get()
 
-        self.__logger.log(INFO, "initializing humblimage")
+        self.logger.log(INFO, "initializing humblimage")
 
         # * Set the request session with retry conditions
         self.__reqSession = self.getRequestSession()
@@ -65,7 +65,7 @@ class humblimage:
 
         # ? Checking if there is spesific categories to get image from
         if "IMG_CATEGORIES" in self.__env and self.__env["IMG_CATEGORIES"] != None:
-            self.__logger.log(INFO, f"Found categories: {self.__env['IMG_CATEGORIES']}")
+            self.logger.log(INFO, f"Found categories: {self.__env['IMG_CATEGORIES']}")
             self.categories = re.split(r"\s*,\s*", self.__env["IMG_CATEGORIES"])
 
     def postImage(self) -> int:
@@ -113,10 +113,10 @@ class humblimage:
                 media_ids=[val.media_id for val in file_results['medias']]
             )
         except Exception as e:
-            self.__logger.log(ERROR, f"Error posting tweet: {e}")
+            self.logger.log(ERROR, f"Error posting tweet: {e}")
             return 1
         
-        self.__logger.log(31, f"Tweet successfully posted: {tweet.id}")
+        self.logger.log(31, f"Tweet successfully posted: {tweet.id}")
         time.sleep(.5)
         self.replyMainWithURL(tweet=tweet, images=file_results['splashs'])
         self.savePostedImage(tweet=tweet, images=file_results['splashs'])
@@ -140,7 +140,7 @@ class humblimage:
             # We must check if the file is more then 5MB
             # https://developer.twitter.com/en/docs/twitter-api/v1/media/upload-media/overview
             if int(r.headers['content-length']) < 5000000:
-                self.__logger.log(INFO, f"Selected image: {splash['id']} weight {int(r.headers['content-length'])}")
+                self.logger.log(INFO, f"Selected image: {splash['id']} weight {int(r.headers['content-length'])}")
                 return {
                     "splash": splash,
                     "url": url,
@@ -175,9 +175,9 @@ class humblimage:
         if "API_USE_CERTIFICATE" in self.__env and strtobool(self.__env['API_USE_CERTIFICATE']) == True:
             if os.path.exists(f"{os.path.dirname(os.path.abspath(__file__))}/certificates/certificate.cert") and os.path.exists(f"{os.path.dirname(os.path.abspath(__file__))}/certificates/private.key"):
                 ss.cert = (f"{os.path.dirname(os.path.abspath(__file__))}/certificates/certificate.cert", f"{os.path.dirname(os.path.abspath(__file__))}/certificates/private.key")
-                self.__logger.log(INFO, "For API call's certificate is seted.")
+                self.logger.log(INFO, "For API call's certificate is seted.")
             else:
-                self.__logger.log(WARNING, "API_USE_CERTIFICATE is set to true, but certificate file is not found.")
+                self.logger.log(WARNING, "API_USE_CERTIFICATE is set to true, but certificate file is not found.")
     
         return ss
 
@@ -190,26 +190,26 @@ class humblimage:
 
         # * Check if all credentials are set in env
         if "UNSPLASH_ACCESS_KEY" not in self.__env:
-            self.__logger.log(ERROR, f"Missing env variable UNSPLASH_ACCESS_KEY")
+            self.logger.log(ERROR, f"Missing env variable UNSPLASH_ACCESS_KEY")
             raise Exception(f"Missing env variable UNSPLASH_ACCESS_KEY")
 
         query = None if self.categories == [] else {'query': random.choice(self.categories)}
 
         if query != None:
-            self.__logger.log(32, f"Searching for image with category: {query['query']}")
+            self.logger.log(32, f"Searching for image with category: {query['query']}")
 
         # * Get the random image from unsplash
         r = self.__reqSession.get("https://api.unsplash.com/photos/random",params= '' if query == None else query, headers={"Authorization": f"Client-ID {self.__env['UNSPLASH_ACCESS_KEY']}"})
 
         # * Check if the request was successfull
         if r.status_code != 200:
-            self.__logger.log(ERROR, f"Failed to get random image from unsplash api. Status code: {r.status_code}")
+            self.logger.log(ERROR, f"Failed to get random image from unsplash api. Status code: {r.status_code}")
             raise Exception(f"Failed to get random image from unsplash api. Status code: {r.status_code}")
 
         # * Check if the returned image is already posted
         json = r.json()
         if self.isImagePosted(type="imageid", value=json["id"]):
-            self.__logger.log(WARNING, f"Image already posted. Skipping to next image")
+            self.logger.log(WARNING, f"Image already posted. Skipping to next image")
             return self.getRandomSplash()
 
         # * Return the json response
@@ -221,7 +221,7 @@ class humblimage:
         replyTweet = tweet.id
 
         for image in images:
-            self.__logger.log(INFO, f"Sending url to main Tweet with: {image['id']}")
+            self.logger.log(INFO, f"Sending url to main Tweet with: {image['id']}")
             sendit = self.__tAPI.update_status(
                 status=f" { '@'+image['user']['twitter_username'] if image['user']['twitter_username'] else '' }\nhttps://unsplash.com/photos/{image['id']}",
                 in_reply_to_status_id=replyTweet
@@ -241,7 +241,7 @@ class humblimage:
         # * Check if all credentials are set in env
         for e in ["TWITTER_CONSUMER_KEY", "TWITTER_CONSUMER_SECRET", "TWITTER_ACCESS_TOKEN", "TWITTER_ACCESS_TOKEN_SECRET"]:
             if e not in self.__env:
-                self.__logger.log(ERROR, f"Missing env variable {e}")
+                self.logger.log(ERROR, f"Missing env variable {e}")
                 raise Exception(f"Missing env variable {e}")
 
         # * Set authentication credentials
@@ -280,14 +280,14 @@ class humblimage:
             tempFile.write(imageResponse["response"].read())
             tempFile.flush()
 
-            self.__logger.log(INFO, f"image {imageResponse['splash']['id']} saved to {tempFile.name}")
+            self.logger.log(INFO, f"image {imageResponse['splash']['id']} saved to {tempFile.name}")
             # os.startfile(tempFile.name)
 
             #? Upload saved image to the Twitter api
             media = self.__tAPI.media_upload(filename=tempFile.name)
             
             if hasattr(media, "media_id"):
-                self.__logger.log(INFO, f"Image uploaded to Twitter, Media ID: {media.media_id}")
+                self.logger.log(INFO, f"Image uploaded to Twitter, Media ID: {media.media_id}")
         except Exception as e:
             raise Exception(e)
         finally:
@@ -333,7 +333,7 @@ class humblimage:
         # * Check if all credentials are set in env
         for e in ["API_ENDPOINT", "API_VERSION"]:
             if e not in self.__env:
-                self.__logger.log(ERROR, f"Missing env variable {e}")
+                self.logger.log(ERROR, f"Missing env variable {e}")
                 raise Exception(f"Missing env variable {e}")
 
         # * Get the last image posted to twitter
@@ -357,17 +357,17 @@ class humblimage:
         # * Check if all credentials are set in env
         for e in ["API_ENDPOINT", "API_VERSION"]:
             if e not in self.__env:
-                self.__logger.log(ERROR, f"Missing env variable {e}")
+                self.logger.log(ERROR, f"Missing env variable {e}")
                 raise Exception(f"Missing env variable {e}")
 
         # * Check if the tweet is valid
         if tweet == None:
-            self.__logger.log(ERROR, f"Missing tweet object")
+            self.logger.log(ERROR, f"Missing tweet object")
             raise Exception(f"Missing tweet object")
         
         # * Check if the images is valid
         if images == []:
-            self.__logger.log(ERROR, f"Missing images list")
+            self.logger.log(ERROR, f"Missing images list")
             raise Exception(f"Missing images list")
         
         # * Save the images to the database
@@ -392,9 +392,9 @@ class humblimage:
         test = self.__reqSession.get(f"{self.__env['API_PROTOCOL']}://{self.__env['API_ENDPOINT']}:{self.__env['API_PORT']}/{self.__env['API_VERSION']}/savePostedImage", params={"imageData":json.dumps(dataBody)}, headers={'user-agent': self.userAgent})
         
         if test.json()['isOk'] == True:
-            self.__logger.log(INFO, f"Image saved to database")
+            self.logger.log(INFO, f"Image saved to database")
         else:
-            self.__logger.log(ERROR, f"Image not saved to database")
+            self.logger.log(ERROR, f"Image not saved to database")
 
         return test.json()['isOk'] == True
     
