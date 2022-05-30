@@ -22,6 +22,8 @@ import time
 from schedule import every, repeat, run_pending
 from humblimage.main import humblimage, logging
 
+def test():
+  print("Test mode")
 
 def main():
   #? parse arguments
@@ -33,8 +35,14 @@ def main():
   #? Loop given time in minutes
   _p.add_argument('--interval', '-i', type=int, default=30, help='Interval between posts in minutes')
 
+  _p.add_argument('--test', '-t', action='store_true', help='Test mode', dest='test')
+
   args = _p.parse_args()
   image = humblimage()
+  
+  if args.test:
+    test()
+    return
 
   if args.single == True:
     image.logger.log(45, "Begining to post single image...")
